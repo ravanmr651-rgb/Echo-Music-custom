@@ -22,7 +22,7 @@ Echo Music delivers a seamless, premium listening experience by leveraging YouTu
 
 ## Community
 
-**Discord**: [Join the Echo Music Discord server](https://discord.gg/Xt5hgsJJuA)
+**Telegram**: [Join the Telegram chanel](https://t.me/ULTRAAMODS)
 
 ---
 
