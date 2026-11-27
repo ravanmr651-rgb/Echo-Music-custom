@@ -58,7 +58,7 @@ jobs:
         chmod +x gradlew
         ./gradlew assembleUniversalGmsRelease
 
-    - name: Build Debug APK (fork PR fallback without signing)
+    - name: Build Optimized FOSS Release APK (fallback signing)
       if: ${{ env.KEYSTORE_BASE64 == '' }}
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -73,7 +73,7 @@ jobs:
           -keyalg RSA \
           -validity 10000
         chmod +x gradlew
-        ./gradlew assembleUniversalFossDebug
+        ./gradlew assembleUniversalFossRelease
 
     - name: Upload Universal APK
       uses: actions/upload-artifact@v7
