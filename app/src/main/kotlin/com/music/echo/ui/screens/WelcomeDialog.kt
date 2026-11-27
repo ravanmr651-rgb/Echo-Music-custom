@@ -104,7 +104,7 @@ private fun WelcomeAppCard() {
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
       Image(
-        painter = painterResource(R.mipmap.ic_launcher),
+        painter = painterResource(R.drawable.ic_launcher_nobg),
         contentDescription = "AURA Music",
         modifier = Modifier.size(88.dp).clip(CircleShape),
       )
