@@ -34,6 +34,9 @@ jobs:
 
     - name: Run Unit Tests
       run: |
+        # The FOSS fork build does not use Firebase; avoid applying the
+        # Google Services plugin with the upstream package configuration.
+        rm -f app/google-services.json
         chmod +x gradlew
         ./gradlew :core:testDebugUnitTest :lyrics:testDebugUnitTest :app:testUniversalFossDebugUnitTest
 
