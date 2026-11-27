@@ -94,15 +94,15 @@ fun PlayerSyncedLyricsView(
   // lyrics screen, but should not masquerade as a synchronized line.
   val lines =
     remember(mediaMetadata?.id, trackLyrics) {
-      if (
-        trackLyrics.isNullOrEmpty() ||
-          trackLyrics == LyricsEntity.LYRICS_NOT_FOUND ||
-          !LyricsUtils.hasSyncedLyrics(trackLyrics)
-      ) {
-        emptyList()
-      } else {
-        LyricsUtils.parseLyrics(trackLyrics).filter { it.text.isNotBlank() }
-      }
+      trackLyrics
+        ?.takeIf { lyrics ->
+          lyrics.isNotEmpty() &&
+            lyrics != LyricsEntity.LYRICS_NOT_FOUND &&
+            LyricsUtils.hasSyncedLyrics(lyrics)
+        }
+        ?.let { lyrics ->
+          LyricsUtils.parseLyrics(lyrics).filter { it.text.isNotBlank() }
+        } ?: emptyList()
     }
 
   var currentPosition by remember(mediaMetadata?.id) { mutableLongStateOf(0L) }
