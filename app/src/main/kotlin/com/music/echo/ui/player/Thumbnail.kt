@@ -1,6 +1,7 @@
 package echo.music.iad1tya.ui.player
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.media.audiofx.Visualizer
 import android.os.Handler
@@ -993,6 +994,7 @@ private fun SeekEffectOverlay(seekDirection: String, modifier: Modifier = Modifi
  * Output visualizer for the active artwork. Live waveform capture is enabled only after the
  * user grants RECORD_AUDIO; otherwise the player shows a low-cost animated pulse.
  */
+@SuppressLint("MissingPermission")
 @Composable
 private fun AuraAudioVisualizer(
   audioSessionId: Int,
