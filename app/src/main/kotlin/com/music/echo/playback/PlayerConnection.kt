@@ -216,6 +216,7 @@ class PlayerConnection(
     }
   }
 
+  @OptIn(UnstableApi::class)
   private fun updateAttachedPlayer(newPlayer: Player) {
     attachedPlayer?.removeListener(this)
     attachedPlayer = newPlayer
