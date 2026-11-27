@@ -595,7 +595,10 @@ class MainActivity : ComponentActivity() {
               UpdateNotificationHelper.showUpdateNotification(context, latestVersion)
             }
           },
-          onError = { Log.e("UpdateCheck", "Startup check failed") },
+          onError = {
+            saveUpdateAvailableState(context, false)
+            Log.e("UpdateCheck", "Startup check failed")
+          },
         )
       }
     }
@@ -1169,7 +1172,7 @@ class MainActivity : ComponentActivity() {
 
         val currentTitle =
           when (navBackStackEntry?.destination?.route) {
-            Screens.Home.route -> "Echo Music"
+            Screens.Home.route -> stringResource(R.string.app_name)
             Screens.Search.route -> stringResource(R.string.search)
             Screens.Library.route -> stringResource(R.string.filter_library)
             Screens.ListenTogether.route -> stringResource(R.string.together)
