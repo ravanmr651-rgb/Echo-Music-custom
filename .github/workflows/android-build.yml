@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "aura-futuristic-upgrade" ]
   pull_request:
     branches: [ "main" ]
 
