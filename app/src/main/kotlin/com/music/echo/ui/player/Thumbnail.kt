@@ -915,7 +915,7 @@ private fun ThumbnailItem(
       }
     }
 
-    if (isCurrentItem && !isEpisode && !hidePlayerThumbnail) {
+    if (isCurrentItem && !hidePlayerThumbnail) {
       AuraAudioVisualizer(
         audioSessionId = audioSessionId,
         isPlaying = isPlaying,
