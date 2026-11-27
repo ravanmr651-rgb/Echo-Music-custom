@@ -236,12 +236,12 @@ private fun AboutAppCard() {
           modifier = Modifier.fillMaxSize()
         )
       } else {
-        coil3.compose.AsyncImage(
-          model = "https://avatars.githubusercontent.com/u/147871321?v=4",
-          contentDescription = null,
-          modifier =
-            Modifier.fillMaxSize().graphicsLayer { rotationY = 180f }, // Un-flip the backside image
-          contentScale = androidx.compose.ui.layout.ContentScale.Crop
+        Text(
+          text = "luv",
+          style = MaterialTheme.typography.titleLarge,
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.primary,
+          modifier = Modifier.graphicsLayer { rotationY = 180f },
         )
       }
     }
