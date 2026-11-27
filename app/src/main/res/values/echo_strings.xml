@@ -374,6 +374,7 @@
     <string name="update_available_title">Update available</string>
     <string name="update_channel_name">App updates</string>
     <string name="update_channel_desc">Notifications about new versions</string>
+    <string name="aura_live_lyrics">AURA LIVE LYRICS</string>
 
     <!-- Offload -->
     <string name="audio_offload">Enable offload</string>
