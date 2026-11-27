@@ -46,7 +46,16 @@ fun AxionEqScreen(onBackClick: () -> Unit, viewModel: AxionEqViewModel = hiltVie
   Scaffold(
     topBar = {
       TopAppBar(
-        title = { Text(stringResource(R.string.echo_equalizer)) },
+        title = {
+          Column {
+            Text("AURA Equalizer", style = MaterialTheme.typography.titleLarge)
+            Text(
+              "PRECISION SOUND ENGINE",
+              style = MaterialTheme.typography.labelSmall,
+              color = MaterialTheme.colorScheme.primary
+            )
+          }
+        },
         navigationIcon = {
           echo.music.iad1tya.ui.component.IconButton(onClick = onBackClick, onLongClick = {}) {
             Icon(
@@ -66,6 +75,35 @@ fun AxionEqScreen(onBackClick: () -> Unit, viewModel: AxionEqViewModel = hiltVie
           .padding(horizontal = 16.dp),
       verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+      Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
+      ) {
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+          Icon(
+            painter = painterResource(R.drawable.equalizer),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(36.dp)
+          )
+          Column(modifier = Modifier.weight(1f)) {
+            Text("AURA SOUND ENGINE", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text("10-band precision tuning", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text("Live DSP • automatic headroom", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+          }
+          Text(
+            text = if (enabled) "ACTIVE" else "OFF",
+            style = MaterialTheme.typography.labelMedium,
+            color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+          )
+        }
+      }
+
       Material3SettingsGroup(
         items =
           listOf(
@@ -113,9 +151,12 @@ fun AxionEqScreen(onBackClick: () -> Unit, viewModel: AxionEqViewModel = hiltVie
               onApplyEq = { newGains ->
                   viewModel.setEnabled(true)
                   viewModel.setMode(1) // Switch to Advanced
-                  for (i in newGains.indices) {
-                      viewModel.setBandGain(i, newGains[i])
-                  }
+                  // AutoEq files are already in dB; convert to the view model's 1/50 dB units.
+                  val scaledGains =
+                    FloatArray(10) { index ->
+                      (newGains.getOrNull(index) ?: 0f).let { (it * 50f).coerceIn(-600f, 600f) }
+                    }
+                  viewModel.setBandsGains(scaledGains, fromUser = true)
               }
           )
       }
@@ -580,7 +621,7 @@ private fun EqBandSlider(
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
     Text(
-      text = "%.1f".format(value / 10f),
+      text = String.format(java.util.Locale.ROOT, "%+.1f dB", value / 50f),
       style = MaterialTheme.typography.labelSmall,
       color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
       textAlign = TextAlign.Center,

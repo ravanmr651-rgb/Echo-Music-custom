@@ -426,17 +426,6 @@ class MainActivity : ComponentActivity() {
     }
 
     lifecycleScope.launch {
-      val aiRecommendationsEnabled =
-        dataStore.data.map { it[AiRecommendationsKey] ?: false }.first()
-      if (aiRecommendationsEnabled) {
-        val lastUpdate = dataStore.data.map { it[LastAiRecommendationUpdateDayKey] ?: 0L }.first()
-        val currentDay = System.currentTimeMillis() / (1000 * 60 * 60 * 24)
-        if (lastUpdate != currentDay) {
-          dataStore.edit { it[LastAiRecommendationUpdateDayKey] = currentDay }
-          AiRecommendationHelper.generateRecommendations(this@MainActivity)
-        }
-      }
-
       dataStore.data
         .map {
           (try {

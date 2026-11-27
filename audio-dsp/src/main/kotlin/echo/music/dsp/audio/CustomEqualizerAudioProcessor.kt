@@ -23,6 +23,10 @@ class CustomEqualizerAudioProcessor : AudioProcessor {
 
   private var inputBuffer: ByteBuffer = EMPTY_BUFFER
   private var outputBuffer: ByteBuffer = EMPTY_BUFFER
+  // Keep a reusable direct buffer separate from the currently exposed output buffer.
+  // getOutput() clears the exposed reference, but the sink has consumed that buffer by
+  // the time queueInput() is called for the next chunk.
+  private var reusableOutputBuffer: ByteBuffer = EMPTY_BUFFER
   private var inputEnded = false
 
   private var filters: List<BiquadFilter> = emptyList()
@@ -117,44 +121,32 @@ class CustomEqualizerAudioProcessor : AudioProcessor {
 
   override fun isActive(): Boolean = isActive
 
-  override fun queueInput(inputBuffer: ByteBuffer) {
-    if (!equalizerEnabled || (filters.isEmpty() && preampGain == 1.0)) {
-      val remaining = inputBuffer.remaining()
-      if (remaining == 0) return
-
-      if (outputBuffer.capacity() < remaining) {
-        outputBuffer = ByteBuffer.allocateDirect(remaining).order(ByteOrder.nativeOrder())
-      } else {
-        outputBuffer.clear()
-      }
-      outputBuffer.put(inputBuffer)
-      outputBuffer.flip()
-      return
-    }
-
-    val inputSize = inputBuffer.remaining()
-    if (inputSize == 0) {
-      return
-    }
-
-    if (outputBuffer === EMPTY_BUFFER || outputBuffer === inputBuffer) {
-      outputBuffer = ByteBuffer.allocateDirect(inputSize).order(ByteOrder.nativeOrder())
-    } else if (outputBuffer.capacity() < inputSize) {
-      outputBuffer = ByteBuffer.allocateDirect(inputSize).order(ByteOrder.nativeOrder())
+  private fun obtainOutputBuffer(requiredCapacity: Int): ByteBuffer {
+    if (reusableOutputBuffer.capacity() < requiredCapacity) {
+      reusableOutputBuffer =
+        ByteBuffer.allocateDirect(requiredCapacity).order(ByteOrder.nativeOrder())
     } else {
-      outputBuffer.clear()
+      reusableOutputBuffer.clear()
+    }
+    return reusableOutputBuffer
+  }
+
+  override fun queueInput(inputBuffer: ByteBuffer) {
+    val inputSize = inputBuffer.remaining()
+    if (inputSize == 0) return
+
+    val output = obtainOutputBuffer(inputSize)
+    if (!equalizerEnabled || (filters.isEmpty() && preampGain == 1.0)) {
+      output.put(inputBuffer)
+    } else {
+      when (encoding) {
+        C.ENCODING_PCM_16BIT -> processAudioBuffer16Bit(inputBuffer, output)
+        else -> output.put(inputBuffer)
+      }
     }
 
-    when (encoding) {
-      C.ENCODING_PCM_16BIT -> {
-        processAudioBuffer16Bit(inputBuffer, outputBuffer)
-      }
-      else -> {
-        outputBuffer.put(inputBuffer)
-      }
-    }
-
-    outputBuffer.flip()
+    output.flip()
+    outputBuffer = output
   }
 
   private fun processAudioBuffer16Bit(input: ByteBuffer, output: ByteBuffer) {
@@ -224,6 +216,7 @@ class CustomEqualizerAudioProcessor : AudioProcessor {
   override fun reset() {
     @Suppress("DEPRECATION") flush()
     inputBuffer = EMPTY_BUFFER
+    reusableOutputBuffer = EMPTY_BUFFER
     sampleRate = 0
     channelCount = 0
     encoding = C.ENCODING_INVALID

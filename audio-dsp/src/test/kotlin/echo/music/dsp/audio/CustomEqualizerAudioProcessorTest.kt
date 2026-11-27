@@ -91,6 +91,32 @@ class CustomEqualizerAudioProcessorTest {
   }
 
   @Test
+  fun outputBufferIsReusedAfterThePreviousChunkIsConsumed() {
+    val format = AudioProcessor.AudioFormat(44100, 2, C.ENCODING_PCM_16BIT)
+    processor.configure(format)
+
+    val firstInput = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder())
+    firstInput.putShort(1000.toShort())
+    firstInput.putShort(2000.toShort())
+    firstInput.flip()
+    processor.queueInput(firstInput)
+    val firstOutput = processor.getOutput()
+    assertEquals(1000.toShort(), firstOutput.getShort())
+    assertEquals(2000.toShort(), firstOutput.getShort())
+
+    val secondInput = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder())
+    secondInput.putShort(3000.toShort())
+    secondInput.putShort(4000.toShort())
+    secondInput.flip()
+    processor.queueInput(secondInput)
+    val secondOutput = processor.getOutput()
+
+    assertTrue("Direct output buffer should be reused between consumed chunks", firstOutput === secondOutput)
+    assertEquals(3000.toShort(), secondOutput.getShort())
+    assertEquals(4000.toShort(), secondOutput.getShort())
+  }
+
+  @Test
   fun testDisableRestoresBypass() {
     val format = AudioProcessor.AudioFormat(44100, 2, C.ENCODING_PCM_16BIT)
     processor.configure(format)
