@@ -143,7 +143,7 @@ fun PlayerSyncedLyricsView(
           verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
           Text(
-            text = context.getString(R.string.aura_live_lyrics),
+            text = "AURA LIVE LYRICS",
             color = Color(0xFF8ADFFF),
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
