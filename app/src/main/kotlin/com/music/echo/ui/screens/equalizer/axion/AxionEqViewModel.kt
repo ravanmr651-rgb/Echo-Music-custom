@@ -115,6 +115,9 @@ constructor(
   }
 
   fun saveCustomProfile(name: String) {
+    // Do not let a queued live-tuning update overwrite the profile being saved.
+    pendingApply?.cancel()
+    pendingApply = null
     viewModelScope.launch {
       val gainsSnapshot = _bandGains.value.copyOf()
       val bands =
