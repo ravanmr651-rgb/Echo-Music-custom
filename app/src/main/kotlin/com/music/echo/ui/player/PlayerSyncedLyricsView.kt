@@ -74,7 +74,7 @@ fun PlayerSyncedLyricsView(
           upsert(
             LyricsEntity(
               metadata.id,
-              fetchedLyricsWithProvider.lyrics.ifBlank { LyricsEntity.LYRICS_NOT_FOUND },
+              fetchedLyricsWithProvider.lyrics?.takeIf { it.isNotBlank() } ?: LyricsEntity.LYRICS_NOT_FOUND,
               fetchedLyricsWithProvider.providerName
             )
           )
