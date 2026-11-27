@@ -38,7 +38,19 @@ jobs:
         # Google Services plugin with the upstream package configuration.
         rm -f app/google-services.json
         chmod +x gradlew
-        ./gradlew :core:testDebugUnitTest :lyrics:testDebugUnitTest :app:testUniversalFossDebugUnitTest
+        # Robolectric downloads its Android runtime artifacts from Maven during tests.
+        # Retry the suite for transient Maven/network failures before failing the workflow.
+        for attempt in 1 2 3; do
+          if ./gradlew :core:testDebugUnitTest :lyrics:testDebugUnitTest :app:testUniversalFossDebugUnitTest; then
+            exit 0
+          fi
+          if [ "$attempt" -lt 3 ]; then
+            echo "Unit tests failed on attempt $attempt; retrying after a short delay..."
+            sleep 20
+          fi
+        done
+        echo "Unit tests failed after 3 attempts."
+        exit 1
 
     - name: Decode Keystore
       if: ${{ env.KEYSTORE_BASE64 != '' }}
