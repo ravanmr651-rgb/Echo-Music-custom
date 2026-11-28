@@ -62,7 +62,7 @@ class PlayerConnection(
       if (!playerReadinessFlow.value) {
         Timber.tag(TAG)
           .w(
-            "Player accessed before service initialization complete; returning best-effort reference"
+            "Player accessed before service initialization complete; returning best-effort reference",
           )
       }
       service.player
@@ -70,7 +70,7 @@ class PlayerConnection(
       Timber.tag(TAG).e(e, "Fatal: player property accessed but not initialized")
       throw IllegalStateException(
         "MusicService.player not initialized; possible race condition in service startup",
-        e
+        e,
       )
     }
   }
@@ -93,7 +93,7 @@ class PlayerConnection(
         Triple(
           initialPlayer.playbackState,
           initialPlayer.playWhenReady,
-          initialPlayer.playWhenReady && initialPlayer.playbackState != STATE_ENDED
+          initialPlayer.playWhenReady && initialPlayer.playbackState != STATE_ENDED,
         )
       } catch (e: Exception) {
         Timber.tag(TAG).e(e, "Error during PlayerConnection initialization, using defaults")
@@ -118,18 +118,28 @@ class PlayerConnection(
     Timber.tag(TAG).d("PlayerConnection state flows initialized successfully")
   }
 
+  val lanSync: echo.music.iad1tya.lansync.LanSyncManager by lazy {
+    echo.music.iad1tya.lansync.LanSyncManager.getInstance(this.context)
+  }
+
   val isEffectivelyPlaying =
     combine(
         isPlaying,
         service.castConnectionHandler?.isCasting ?: MutableStateFlow(false),
-        service.castConnectionHandler?.castIsPlaying ?: MutableStateFlow(false)
-      ) { localPlaying, isCasting, castPlaying ->
-        if (isCasting) castPlaying else localPlaying
+        service.castConnectionHandler?.castIsPlaying ?: MutableStateFlow(false),
+        lanSync.isRemoteControlling,
+        lanSync.remotePlaying,
+      ) { localPlaying, isCasting, castPlaying, isLanRemote, lanPlaying ->
+        when {
+          isCasting -> castPlaying
+          isLanRemote -> lanPlaying
+          else -> localPlaying
+        }
       }
       .stateIn(
         scope,
         SharingStarted.Lazily,
-        player.playbackState != STATE_ENDED && player.playWhenReady
+        player.playbackState != STATE_ENDED && player.playWhenReady,
       )
 
   /** Current ExoPlayer audio session for output visual effects. */
@@ -137,20 +147,27 @@ class PlayerConnection(
 
   val mediaMetadata = MutableStateFlow(player.currentMetadata)
   val currentSong = mediaMetadata.flatMapLatest { database.song(it?.id) }
-  val currentLyrics =
-    mediaMetadata.flatMapLatest { mediaMetadata -> database.lyrics(mediaMetadata?.id) }
-  val currentFormat =
-    mediaMetadata.flatMapLatest { mediaMetadata -> database.format(mediaMetadata?.id) }
+  val currentLyrics = mediaMetadata.flatMapLatest { mediaMetadata ->
+    database.lyrics(mediaMetadata?.id)
+  }
+  val currentFormat = mediaMetadata.flatMapLatest { mediaMetadata ->
+    database.format(mediaMetadata?.id)
+  }
 
   val duration: kotlinx.coroutines.flow.StateFlow<Long> =
     combine(mediaMetadata, playbackState) { meta, _ ->
-      val playerDur = try {
-        player.duration
-      } catch (_: Exception) {
-        androidx.media3.common.C.TIME_UNSET
+        val playerDur =
+          try {
+            player.duration
+          } catch (_: Exception) {
+            androidx.media3.common.C.TIME_UNSET
+          }
+        echo.music.iad1tya.playback.PlaybackCutoffGuard.computeEffectiveDuration(
+          meta?.duration,
+          playerDur,
+        )
       }
-      echo.music.iad1tya.playback.PlaybackCutoffGuard.computeEffectiveDuration(meta?.duration, playerDur)
-    }.stateIn(scope, SharingStarted.Lazily, 0L)
+      .stateIn(scope, SharingStarted.Lazily, 0L)
 
   val queueTitle = MutableStateFlow<String?>(null)
   val queueWindows = MutableStateFlow<List<Timeline.Window>>(emptyList())
@@ -358,6 +375,8 @@ class PlayerConnection(
         } else {
           castHandler.play()
         }
+      } else if (lanSync.isRemoteControlling.value) {
+        lanSync.togglePlayRemote()
       } else {
         player.togglePlayPause()
       }
@@ -371,6 +390,8 @@ class PlayerConnection(
       val castHandler = service.castConnectionHandler
       if (castHandler?.isCasting?.value == true) {
         castHandler.play()
+      } else if (lanSync.isRemoteControlling.value) {
+        lanSync.playRemote()
       } else {
         if (player.playbackState == Player.STATE_IDLE) {
           player.prepare()
@@ -387,6 +408,8 @@ class PlayerConnection(
       val castHandler = service.castConnectionHandler
       if (castHandler?.isCasting?.value == true) {
         castHandler.pause()
+      } else if (lanSync.isRemoteControlling.value) {
+        lanSync.pauseRemote()
       } else {
         player.playWhenReady = false
       }
@@ -400,6 +423,8 @@ class PlayerConnection(
       val castHandler = service.castConnectionHandler
       if (castHandler?.isCasting?.value == true) {
         castHandler.seekTo(position)
+      } else if (lanSync.isRemoteControlling.value) {
+        lanSync.seekRemote(position)
       } else {
         player.seekTo(position)
       }
@@ -414,6 +439,10 @@ class PlayerConnection(
       val castHandler = service.castConnectionHandler
       if (castHandler?.isCasting?.value == true) {
         castHandler.skipToNext()
+        return
+      }
+      if (lanSync.isRemoteControlling.value) {
+        lanSync.nextRemote()
         return
       }
       player.seekToNext()
@@ -435,6 +464,10 @@ class PlayerConnection(
       val castHandler = service.castConnectionHandler
       if (castHandler?.isCasting?.value == true) {
         castHandler.skipToPrevious()
+        return
+      }
+      if (lanSync.isRemoteControlling.value) {
+        lanSync.previousRemote()
         return
       }
 
@@ -468,6 +501,10 @@ class PlayerConnection(
       val castHandler = service.castConnectionHandler
       if (castHandler?.isCasting?.value == true) {
         castHandler.skipToPrevious()
+        return
+      }
+      if (lanSync.isRemoteControlling.value) {
+        lanSync.previousRemote()
         return
       }
       if (!player.hasPreviousMediaItem()) return
@@ -589,52 +626,51 @@ class PlayerConnection(
 
   private fun startSponsorBlockPolling() {
     sponsorBlockJob?.cancel()
-    sponsorBlockJob =
-      scope.launch {
-        val sponsorBlockEnabledFlow =
-          context.dataStore.data.map {
-            (try {
-              it[SponsorBlockEnabledKey]
-            } catch (e: Exception) {
-              null
-            }) ?: false
-          }
-
-        launch {
-          combine(mediaMetadata, sponsorBlockEnabledFlow) { metadata, enabled ->
-              Pair(metadata, enabled)
-            }
-            .collect { (metadata, enabled) ->
-              if (enabled && metadata != null) {
-                val videoId = metadata.id
-                sponsorBlockSegments.value = sponsorBlockRepository.getSkipSegments(videoId)
-              } else {
-                sponsorBlockSegments.value = emptyList()
-              }
-            }
+    sponsorBlockJob = scope.launch {
+      val sponsorBlockEnabledFlow =
+        context.dataStore.data.map {
+          (try {
+            it[SponsorBlockEnabledKey]
+          } catch (e: Exception) {
+            null
+          }) ?: false
         }
 
-        launch {
-          while (true) {
-            if (player.isPlaying) {
-              val currentSegments = sponsorBlockSegments.value
-              if (currentSegments.isNotEmpty()) {
-                val currentPosSec = player.currentPosition / 1000f
-                for (segment in currentSegments) {
-                  if (currentPosSec >= segment.segment[0] && currentPosSec < segment.segment[1]) {
-                    Timber.d(
-                      "SponsorBlock: skipping segment ${segment.category} from ${segment.segment[0]} to ${segment.segment[1]}"
-                    )
-                    player.seekTo((segment.segment[1] * 1000).toLong())
-                    break
-                  }
+      launch {
+        combine(mediaMetadata, sponsorBlockEnabledFlow) { metadata, enabled ->
+            Pair(metadata, enabled)
+          }
+          .collect { (metadata, enabled) ->
+            if (enabled && metadata != null) {
+              val videoId = metadata.id
+              sponsorBlockSegments.value = sponsorBlockRepository.getSkipSegments(videoId)
+            } else {
+              sponsorBlockSegments.value = emptyList()
+            }
+          }
+      }
+
+      launch {
+        while (true) {
+          if (player.isPlaying) {
+            val currentSegments = sponsorBlockSegments.value
+            if (currentSegments.isNotEmpty()) {
+              val currentPosSec = player.currentPosition / 1000f
+              for (segment in currentSegments) {
+                if (currentPosSec >= segment.segment[0] && currentPosSec < segment.segment[1]) {
+                  Timber.d(
+                    "SponsorBlock: skipping segment ${segment.category} from ${segment.segment[0]} to ${segment.segment[1]}",
+                  )
+                  player.seekTo((segment.segment[1] * 1000).toLong())
+                  break
                 }
               }
             }
-            delay(500)
           }
+          delay(500)
         }
       }
+    }
   }
 
   fun dispose() {

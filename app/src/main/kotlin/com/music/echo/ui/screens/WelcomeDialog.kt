@@ -29,7 +29,7 @@ fun WelcomeDialog(onDismissRequest: () -> Unit) {
 
   Dialog(
     onDismissRequest = onDismissRequest,
-    properties = DialogProperties(usePlatformDefaultWidth = false)
+    properties = DialogProperties(usePlatformDefaultWidth = false),
   ) {
     Card(
       modifier = Modifier.padding(24.dp).fillMaxWidth(),

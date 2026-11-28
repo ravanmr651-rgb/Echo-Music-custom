@@ -2,14 +2,19 @@ package echo.music.iad1tya.utils
 
 import android.content.Context
 import androidx.core.content.edit
+import com.music.innertube.YouTube
 import com.music.innertube.models.PODCAST_BROWSE_PREFIX
 import com.music.innertube.models.SongItem
-import com.music.innertube.pages.HomePage
 import com.music.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_PODCAST_EPISODE
+import com.music.innertube.pages.HomePage
+import echo.music.iad1tya.db.MusicDatabase
 import echo.music.iad1tya.models.MediaMetadata
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /** How far an episode was listened, plus what is needed to show it without loading it again. */
@@ -48,6 +53,9 @@ data class EpisodeProgress(
     get() =
       durationMs in 1 until PodcastProgress.MIN_UNLINKED_EPISODE_MS &&
         showBrowseId?.startsWith(PODCAST_BROWSE_PREFIX) != true
+
+  val needsMetadata: Boolean
+    get() = title.isBlank() || title == id || thumbnailUrl.isNullOrBlank()
 }
 
 /**
@@ -65,6 +73,7 @@ object PodcastProgress {
   internal fun isNearEnd(positionMs: Long, durationMs: Long): Boolean =
     durationMs > 0 &&
       durationMs - positionMs < (durationMs / 20).coerceIn(END_MARGIN_MIN_MS, END_MARGIN_MAX_MS)
+
   private const val MAX_ENTRIES = 500
   /** Shorter items count as episodes only when they link to their show. */
   internal const val MIN_UNLINKED_EPISODE_MS = 10 * 60_000L
@@ -78,15 +87,16 @@ object PodcastProgress {
   }
 
   private val _entries by lazy {
-    val stored =
-      prefs.all.mapNotNull { (id, value) -> (value as? String)?.let { parse(id, it) } }
+    val stored = prefs.all.mapNotNull { (id, value) -> (value as? String)?.let { parse(id, it) } }
     val (mislabelled, episodes) = stored.partition { it.isMislabelled }
     if (mislabelled.isNotEmpty()) prefs.edit { mislabelled.forEach { remove(it.id) } }
     // Left near the end by an older build, which counted a smaller margin as played.
     MutableStateFlow(
       episodes
-        .map { if (it.isInProgress && isNearEnd(it.positionMs, it.durationMs)) it.asPlayed() else it }
-        .associateBy { it.id }
+        .map {
+          if (it.isInProgress && isNearEnd(it.positionMs, it.durationMs)) it.asPlayed() else it
+        }
+        .associateBy { it.id },
     )
   }
 
@@ -100,8 +110,8 @@ object PodcastProgress {
     entries.values.filter { it.isInProgress && !it.dismissed }.sortedByDescending { it.updatedAt }
 
   /**
-   * Whether [metadata] is a podcast episode. YouTube also labels some music uploads as episodes,
-   * so the label alone is not enough: the item must link to its show or be episode-length.
+   * Whether [metadata] is a podcast episode. YouTube also labels some music uploads as episodes, so
+   * the label alone is not enough: the item must link to its show or be episode-length.
    */
   fun isEpisode(metadata: MediaMetadata, durationMs: Long): Boolean =
     metadata.musicVideoType == MUSIC_VIDEO_TYPE_PODCAST_EPISODE &&
@@ -146,9 +156,9 @@ object PodcastProgress {
     (if (speed % 1f == 0f) speed.toInt().toString() else speed.toString().trimEnd('0')) + "x"
 
   /**
-   * Takes in what YouTube reports for the account, so episodes listened elsewhere resume from
-   * there here too. The furthest position wins. Entries from YouTube sort behind what was
-   * listened on this device, as their time is unknown.
+   * Takes in what YouTube reports for the account, so episodes listened elsewhere resume from there
+   * here too. The furthest position wins. Entries from YouTube sort behind what was listened on
+   * this device, as their time is unknown.
    */
   fun mergeRemote(episode: SongItem): Boolean {
     val percent = episode.playedPercent?.takeIf { it > 0 } ?: return false
@@ -170,11 +180,41 @@ object PodcastProgress {
             show = episode.artists.firstOrNull()?.name,
             showBrowseId = episode.artists.firstOrNull()?.id,
             thumbnailUrl = episode.thumbnail,
-          )
+          ),
         )
-      existing.finished -> Unit
+      existing.finished ->
+        if (existing.needsMetadata && episode.title.isNotBlank()) {
+          save(
+            existing.copy(
+              title = episode.title,
+              show = episode.artists.firstOrNull()?.name ?: existing.show,
+              showBrowseId = episode.artists.firstOrNull()?.id ?: existing.showBrowseId,
+              thumbnailUrl = episode.thumbnail.takeIf { it.isNotBlank() } ?: existing.thumbnailUrl,
+            ),
+          )
+        }
       finished || positionMs > existing.positionMs + REMOTE_AHEAD_MARGIN_MS ->
-        save(existing.copy(positionMs = positionMs, finished = finished))
+        save(
+          existing.copy(
+            positionMs = positionMs,
+            finished = finished,
+            title =
+              if (existing.needsMetadata && episode.title.isNotBlank()) episode.title
+              else existing.title,
+            show = episode.artists.firstOrNull()?.name ?: existing.show,
+            showBrowseId = episode.artists.firstOrNull()?.id ?: existing.showBrowseId,
+            thumbnailUrl = episode.thumbnail.takeIf { it.isNotBlank() } ?: existing.thumbnailUrl,
+          ),
+        )
+      existing.needsMetadata && episode.title.isNotBlank() ->
+        save(
+          existing.copy(
+            title = episode.title,
+            show = episode.artists.firstOrNull()?.name ?: existing.show,
+            showBrowseId = episode.artists.firstOrNull()?.id ?: existing.showBrowseId,
+            thumbnailUrl = episode.thumbnail.takeIf { it.isNotBlank() } ?: existing.thumbnailUrl,
+          ),
+        )
     }
     return true
   }
@@ -183,17 +223,19 @@ object PodcastProgress {
    * Takes YouTube's own "continue listening" shelf out of [sections], merging its episodes in, so
    * only one such list shows. It is told by its title, or by every episode being in progress.
    */
-  fun withoutContinueShelf(sections: List<HomePage.Section>, title: String): List<HomePage.Section> =
-    sections.filterNot { section ->
-      val episodes = section.items.filterIsInstance<SongItem>().filter { it.isPodcastEpisode }
-      val isContinueShelf =
-        episodes.isNotEmpty() &&
-          (section.title.equals(title, ignoreCase = true) ||
-            (episodes.size == section.items.size &&
-              episodes.all { (it.playedPercent ?: 0) in 1 until REMOTE_PLAYED_PERCENT }))
-      // Removed only when every episode made it into the app's list, so none disappears.
-      isContinueShelf && episodes.map(::mergeRemote).all { it }
-    }
+  fun withoutContinueShelf(
+    sections: List<HomePage.Section>,
+    title: String,
+  ): List<HomePage.Section> = sections.filterNot { section ->
+    val episodes = section.items.filterIsInstance<SongItem>().filter { it.isPodcastEpisode }
+    val isContinueShelf =
+      episodes.isNotEmpty() &&
+        (section.title.equals(title, ignoreCase = true) ||
+          (episodes.size == section.items.size &&
+            episodes.all { (it.playedPercent ?: 0) in 1 until REMOTE_PLAYED_PERCENT }))
+    // Removed only when every episode made it into the app's list, so none disappears.
+    isContinueShelf && episodes.map(::mergeRemote).all { it }
+  }
 
   /** Records the position of the playing episode [metadata]. */
   fun update(metadata: MediaMetadata, positionMs: Long, durationMs: Long) {
@@ -213,7 +255,7 @@ object PodcastProgress {
         showBrowseId = metadata.artists.firstOrNull()?.id ?: existing?.showBrowseId,
         thumbnailUrl = metadata.thumbnailUrl ?: existing?.thumbnailUrl,
         dismissed = existing?.dismissed == true,
-      )
+      ),
     )
   }
 
@@ -221,6 +263,113 @@ object PodcastProgress {
   fun markFinished(id: String) {
     val existing = get(id) ?: return
     save(existing.copy(positionMs = 0L, finished = true, updatedAt = System.currentTimeMillis()))
+  }
+
+  /** Merges podcast progress received from a LAN peer (e.g. Echo Music Desktop). */
+  fun mergeLanEpisode(
+    id: String,
+    positionMs: Long,
+    durationMs: Long,
+    finished: Boolean,
+    updatedAt: Long,
+    title: String?,
+    show: String?,
+    thumbnailUrl: String?,
+  ): Boolean {
+    if (id.isBlank()) return false
+    val existing = get(id)
+    val shouldReplace =
+      when {
+        existing == null -> positionMs >= MIN_POSITION_MS || finished
+        finished && !existing.finished -> true
+        existing.finished && !finished -> false
+        updatedAt > 0L && existing.updatedAt > 0L && updatedAt != existing.updatedAt ->
+          updatedAt > existing.updatedAt
+        else -> positionMs > existing.positionMs
+      }
+    if (!shouldReplace) return false
+    val resolvedDuration = durationMs.takeIf { it > 0L } ?: existing?.durationMs ?: 0L
+    val isFin = finished || isNearEnd(positionMs, resolvedDuration)
+    save(
+      EpisodeProgress(
+        id = id,
+        positionMs = if (isFin) 0L else positionMs,
+        durationMs = resolvedDuration,
+        finished = isFin,
+        updatedAt = updatedAt.takeIf { it > 0L } ?: System.currentTimeMillis(),
+        title = title?.takeIf { it.isNotBlank() } ?: existing?.title ?: id,
+        show = show?.takeIf { it.isNotBlank() } ?: existing?.show,
+        showBrowseId = existing?.showBrowseId,
+        thumbnailUrl = thumbnailUrl?.takeIf { it.isNotBlank() } ?: existing?.thumbnailUrl,
+        dismissed = existing?.dismissed == true,
+      ),
+    )
+    return true
+  }
+
+  /** Hydrates missing title, show, thumbnail, and duration for older/LAN-synced entries. */
+  suspend fun hydrateMissingMetadata(ids: List<String>, database: MusicDatabase) =
+    withContext(Dispatchers.IO) {
+      val remainingIds = mutableListOf<String>()
+      for (id in ids.distinct()) {
+        val existing = get(id) ?: continue
+        if (!existing.needsMetadata) continue
+        val dbSong = database.song(id).firstOrNull()
+        if (dbSong != null && dbSong.song.title.isNotBlank()) {
+          val resolvedDuration =
+            existing.durationMs.takeIf { it > 0L }
+              ?: dbSong.song.duration.takeIf { it > 0 }?.times(1000L)
+              ?: 0L
+          val updated =
+            existing.copy(
+              title = dbSong.song.title,
+              show = dbSong.artists.firstOrNull()?.name ?: existing.show,
+              showBrowseId = dbSong.artists.firstOrNull()?.id ?: existing.showBrowseId,
+              thumbnailUrl =
+                dbSong.song.thumbnailUrl?.takeIf { it.isNotBlank() } ?: existing.thumbnailUrl,
+              durationMs = resolvedDuration,
+            )
+          if (updated.isMislabelled) {
+            removeEntry(id)
+          } else {
+            save(updated)
+          }
+        } else {
+          remainingIds += id
+        }
+      }
+
+      if (remainingIds.isEmpty()) return@withContext
+
+      remainingIds.chunked(25).forEach { chunk ->
+        val fetched = YouTube.queue(videoIds = chunk).getOrNull().orEmpty()
+        fetched.forEach { song ->
+          val existing = get(song.id) ?: return@forEach
+          val resolvedDuration =
+            existing.durationMs.takeIf { it > 0L }
+              ?: song.duration?.takeIf { it > 0 }?.times(1000L)
+              ?: 0L
+          val updated =
+            existing.copy(
+              title = song.title.takeIf { it.isNotBlank() } ?: existing.title,
+              show = song.artists.firstOrNull()?.name ?: existing.show,
+              showBrowseId = song.artists.firstOrNull()?.id ?: existing.showBrowseId,
+              thumbnailUrl = song.thumbnail.takeIf { it.isNotBlank() } ?: existing.thumbnailUrl,
+              durationMs = resolvedDuration,
+            )
+          if (updated.isMislabelled) {
+            removeEntry(song.id)
+          } else {
+            save(updated)
+          }
+        }
+      }
+    }
+
+  @Synchronized
+  private fun removeEntry(id: String) {
+    _entries.value = _entries.value - id
+    prefs.edit { remove(id) }
   }
 
   @Synchronized

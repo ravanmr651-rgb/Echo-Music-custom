@@ -88,6 +88,8 @@ import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import com.music.innertube.models.PODCAST_BROWSE_PREFIX
+import com.music.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_PODCAST_EPISODE
 import echo.music.iad1tya.LocalListenTogetherManager
 import echo.music.iad1tya.LocalPlayerConnection
 import echo.music.iad1tya.R
@@ -114,8 +116,6 @@ import echo.music.iad1tya.utils.PodcastProgress
 import echo.music.iad1tya.utils.isLocalMediaId
 import echo.music.iad1tya.utils.rememberEnumPreference
 import echo.music.iad1tya.utils.rememberPreference
-import com.music.innertube.models.PODCAST_BROWSE_PREFIX
-import com.music.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_PODCAST_EPISODE
 import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
@@ -528,7 +528,7 @@ private fun ThumbnailHeader(
   if (listenTogetherRoleState?.value != RoomRole.NONE) {
     Box(
       modifier =
-        modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 48.dp, bottom = 4.dp)
+        modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 48.dp, bottom = 4.dp),
     ) {
       Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -622,7 +622,7 @@ private fun ThumbnailItem(
             Modifier.size(dimensions.thumbnailSize + (PlayerHorizontalPadding * 2))
           } else {
             Modifier.width(dimensions.itemWidth).fillMaxSize()
-          }
+          },
         )
         .padding(horizontal = PlayerHorizontalPadding)
         .graphicsLayer {
@@ -665,7 +665,7 @@ private fun ThumbnailItem(
                 onSeek(context.getString(R.string.seek_backward_dynamic, skipAmount / 1000), true)
               } else if (isRightSide) {
                 playerConnection.player.seekTo(
-                  (currentPosition + skipAmount).coerceAtMost(duration)
+                  (currentPosition + skipAmount).coerceAtMost(duration),
                 )
                 onSeek(context.getString(R.string.seek_forward_dynamic, skipAmount / 1000), true)
               } else {
@@ -675,7 +675,7 @@ private fun ThumbnailItem(
                   playerConnection.player.play()
                 }
               }
-            }
+            },
           )
         },
     contentAlignment = Alignment.Center,
@@ -689,7 +689,7 @@ private fun ThumbnailItem(
               MaterialShapes.Clover8Leaf.toShape()
             } else {
               RoundedCornerShape(dimensions.cornerRadius)
-            }
+            },
           )
           .graphicsLayer {
              rotationZ = -rotation
@@ -1213,7 +1213,7 @@ internal fun splitAndNormalizeArtists(raw: String): List<String> {
       Regex(
         "(?:\\s*,\\s*|\\s*&\\s*|\\s+×\\s+|\\s+x\\s+|\\bfeat\\.?\\b|\\bft\\.?\\b|\\bfeaturing\\b|\\bwith\\b)",
         RegexOption.IGNORE_CASE,
-      )
+      ),
     )
     .map { it.replace(Regex("\\s+"), " ").trim() }
     .filter { it.isNotEmpty() }
