@@ -47,7 +47,7 @@ fun AboutScreen(
   navController: NavController,
   scrollBehavior: TopAppBarScrollBehavior,
   onBack: (() -> Unit)? = null,
-  highlightKey: String? = null
+  highlightKey: String? = null,
 ) {
   val uriHandler = LocalUriHandler.current
 
@@ -195,7 +195,7 @@ private fun AboutAppCard() {
         targetValue = if (isEasterEggActive) 180f else 0f,
         animationSpec =
           spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "flip"
+        label = "flip",
       )
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -206,9 +206,9 @@ private fun AboutAppCard() {
         animationSpec =
           spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
+            stiffness = Spring.StiffnessMedium,
           ),
-        label = "scale"
+        label = "scale",
       )
 
     Box(
@@ -224,16 +224,16 @@ private fun AboutAppCard() {
           .clickable(
             interactionSource = interactionSource,
             indication = null,
-            onClick = { isEasterEggActive = !isEasterEggActive }
+            onClick = { isEasterEggActive = !isEasterEggActive },
           ),
-      contentAlignment = Alignment.Center
+      contentAlignment = Alignment.Center,
     ) {
       if (rotation <= 90f) {
         Image(
           painter = painterResource(R.drawable.ic_launcher_nobg),
           contentDescription = null,
           colorFilter = ColorFilter.tint(if (isDark) Color.White else Color(0xFFEA3829)),
-          modifier = Modifier.fillMaxSize()
+          modifier = Modifier.fillMaxSize(),
         )
       } else {
         Text(

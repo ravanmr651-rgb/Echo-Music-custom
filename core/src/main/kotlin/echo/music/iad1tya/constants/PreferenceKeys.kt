@@ -152,7 +152,7 @@ enum class AudioQuality(
 val DownloadQualityKey = stringPreferencesKey("downloadQuality")
 
 enum class DownloadQuality {
-  YOUTUBE
+  YOUTUBE,
 }
 
 val DownloadOnWifiOnlyKey = booleanPreferencesKey("downloadOnWifiOnly")
@@ -894,3 +894,5 @@ enum class RecommendationSource {
 }
 
 val RecommendationSourceKey = stringPreferencesKey("recommendation_source")
+val DismissDesktopReleaseBannerKey = booleanPreferencesKey("dismissDesktopReleaseBanner")
+val LanSyncEnabledKey = booleanPreferencesKey("lanSyncEnabled")

@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/banner.png" alt="Echo Music Logo"/>
 
-  <p><b>A modern Android music app with ad-free streaming, synced lyrics, offline playback, and an intuitive user experience.</b></p>
+  <p><b>AURA Music — a modern Android music app with ad-free streaming, synced lyrics, offline playback, and an intuitive user experience.</b></p>
 </div>
 
 ---
@@ -13,16 +13,16 @@
 
 ## Overview
 
-Echo Music delivers a seamless, premium listening experience by leveraging YouTube Music's vast library — without the ads. It adds powerful extras including offline downloads, real-time synchronized lyrics, and environment-aware music recognition.
+AURA Music delivers a seamless, premium listening experience by leveraging YouTube Music's vast library — without the ads. It adds powerful extras including offline downloads, real-time synchronized lyrics, and environment-aware music recognition.
 
 > [!IMPORTANT]
-> **In-app OTA updates have been permanently removed.** Please update manually via the website. Echo Music is completely free and ad-free; the few ads shown during a manual download help support the ongoing development of this project. Please do not open issues requesting to bring this back. Thank you for your support!
+> **AURA update policy:** AURA Music checks this repository's GitHub Releases for newer versions. Downloads and installation are always user-initiated; the app never installs updates silently. AURA Music is free and ad-free.
 
 ---
 
 ## Community
 
-**Telegram**: [Join the Telegram chanel](https://t.me/ULTRAAMODS)
+**Discord**: [Join the Echo Music Discord server](https://discord.gg/Xt5hgsJJuA)
 
 ---
 
@@ -37,6 +37,7 @@ Echo Music delivers a seamless, premium listening experience by leveraging YouTu
 - [Overview](#overview)
 - [Screenshots](#screenshots)
 - [Features](#features)
+- [Echo Connect (Cross-Device Sync & Handoff)](#echo-connect-cross-device-sync--handoff)
 - [320 kbps Audio Extension](#320-kbps-audio-extension)
 - [Lossless Audio Extension](#lossless-audio-extension)
 - [Installation & Setup](#installation--setup)
@@ -162,6 +163,22 @@ Echo Music delivers a seamless, premium listening experience by leveraging YouTu
 - **Hide YouTube Shorts** — Keep Shorts out of your music browsing.
 
 </details>
+
+---
+
+## Echo Connect (Cross-Device Sync & Handoff)
+
+**Echo Connect** links **Echo Music (Android)** with **[Echo Music Desktop](https://github.com/EchoMusicApp/Desktop)** over your local Wi-Fi network — with zero cloud servers.
+
+### Key Capabilities
+- **6-Digit Device Pairing**: Open **Settings → Echo Connect** (right below **Account**) and tap your Desktop to generate a 6-digit code (auto-refreshes every 60s), or initiate pairing from Desktop and enter the code in the Android popup.
+- **Automatic Google Account Login**: Automatically signs Desktop into your YouTube Music Google account upon binding.
+- **Bidirectional Local & Spotify Playlist Sync**: Keeps locally created playlists synced between Android and Desktop with zero overlap/duplicates, and syncs your connected Spotify playlists to Desktop's Library.
+- **Podcast Progress Sync**: Merges episode timestamps and finished status across devices.
+- **5-Minute Auto-Sync & Force Sync**: Automatically syncs every 5 minutes in the background, with a **Force Sync** button and timestamped sync history log showing what synced and when.
+- **Seamless Playback Handoff & Remote Control**: Switch playback between **This Phone** and your paired Desktop from the player's audio output sheet or **Settings → Echo Connect**. Control play/pause, exact seek position, next/previous, volume, shuffle, and repeat from either device.
+
+📖 **Full Guide**: See [docs/ECHO_CONNECT.md](./docs/ECHO_CONNECT.md) for step-by-step setup, pairing, sync details, and troubleshooting.
 
 ---
 
@@ -317,9 +334,9 @@ Without the support of this incredible open-source community, none of this would
 <!-- readme: contributors -start -->
 <table>
 <tr><td align="center"><a href="https://github.com/iad1tya"><img src="https://avatars.githubusercontent.com/u/147871321?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/gerry02"><img src="https://avatars.githubusercontent.com/u/33490327?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/mdakashhossain1"><img src="https://avatars.githubusercontent.com/u/85729564?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/Roshan-aa11"><img src="https://avatars.githubusercontent.com/u/192568043?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/InlitX"><img src="https://avatars.githubusercontent.com/u/193412982?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/Mickael81"><img src="https://avatars.githubusercontent.com/u/184148670?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/PurveshShinde"><img src="https://avatars.githubusercontent.com/u/134372658?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/pranav6004"><img src="https://avatars.githubusercontent.com/u/156088278?v=4" width="60" height="60" /></a></td></tr>
-<tr><td align="center"><a href="https://github.com/ErrorxCode"><img src="https://avatars.githubusercontent.com/u/65817230?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/paarthjawalkar"><img src="https://avatars.githubusercontent.com/u/334091017?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/VardhmanSurana"><img src="https://avatars.githubusercontent.com/u/100058534?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/Rajendra0309"><img src="https://avatars.githubusercontent.com/u/103703747?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/ravanmr651-rgb"><img src="https://avatars.githubusercontent.com/u/222803703?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/soumya-99"><img src="https://avatars.githubusercontent.com/u/59480692?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/bivekk51"><img src="https://avatars.githubusercontent.com/u/115235822?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/kaunkrishna"><img src="https://avatars.githubusercontent.com/u/270065466?v=4" width="60" height="60" /></a></td></tr>
-<tr><td align="center"><a href="https://github.com/Berserkr2k"><img src="https://avatars.githubusercontent.com/u/127702589?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/TanvirSdq"><img src="https://avatars.githubusercontent.com/u/112406045?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/fahmid1603"><img src="https://avatars.githubusercontent.com/u/42404846?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/andrewvalletta"><img src="https://avatars.githubusercontent.com/u/137303110?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/DennyHo0917"><img src="https://avatars.githubusercontent.com/u/149746199?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/Felixkw12"><img src="https://avatars.githubusercontent.com/u/151852644?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/guilhermenovais"><img src="https://avatars.githubusercontent.com/u/61892041?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/mvanhorn"><img src="https://avatars.githubusercontent.com/u/455140?v=4" width="60" height="60" /></a></td></tr>
-<tr><td align="center"><a href="https://github.com/pranavxdevops"><img src="https://avatars.githubusercontent.com/u/110167539?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/Thibaultjaigu"><img src="https://avatars.githubusercontent.com/u/84420566?v=4" width="60" height="60" /></a></td></tr>
+<tr><td align="center"><a href="https://github.com/ErrorxCode"><img src="https://avatars.githubusercontent.com/u/65817230?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/VardhmanSurana"><img src="https://avatars.githubusercontent.com/u/100058534?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/paarthjawalkar"><img src="https://avatars.githubusercontent.com/u/334091017?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/Rajendra0309"><img src="https://avatars.githubusercontent.com/u/103703747?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/soumya-99"><img src="https://avatars.githubusercontent.com/u/59480692?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/bivekk51"><img src="https://avatars.githubusercontent.com/u/115235822?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/kaunkrishna"><img src="https://avatars.githubusercontent.com/u/270065466?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/fahmid1603"><img src="https://avatars.githubusercontent.com/u/42404846?v=4" width="60" height="60" /></a></td></tr>
+<tr><td align="center"><a href="https://github.com/TanvirSdq"><img src="https://avatars.githubusercontent.com/u/112406045?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/Berserkr2k"><img src="https://avatars.githubusercontent.com/u/127702589?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/andrewvalletta"><img src="https://avatars.githubusercontent.com/u/137303110?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/DennyHo0917"><img src="https://avatars.githubusercontent.com/u/149746199?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/Felixkw12"><img src="https://avatars.githubusercontent.com/u/151852644?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/guilhermenovais"><img src="https://avatars.githubusercontent.com/u/61892041?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/mvanhorn"><img src="https://avatars.githubusercontent.com/u/455140?v=4" width="60" height="60" /></a></td><td align="center"><a href="https://github.com/pranavxdevops"><img src="https://avatars.githubusercontent.com/u/110167539?v=4" width="60" height="60" /></a></td></tr>
+<tr><td align="center"><a href="https://github.com/Thibaultjaigu"><img src="https://avatars.githubusercontent.com/u/84420566?v=4" width="60" height="60" /></a></td></tr>
 </table>
 <!-- readme: contributors -end -->
 

@@ -57,6 +57,7 @@ import echo.music.iad1tya.ui.screens.settings.BlockedArtistsScreen
 import echo.music.iad1tya.ui.screens.settings.ContentSettings
 import echo.music.iad1tya.ui.screens.settings.DarkMode
 import echo.music.iad1tya.ui.screens.settings.DislikedSongsScreen
+import echo.music.iad1tya.ui.screens.settings.EchoConnectSettingsScreen
 import echo.music.iad1tya.ui.screens.settings.GlassEffectSettings
 import echo.music.iad1tya.ui.screens.settings.MusicFlowSettings
 import echo.music.iad1tya.ui.screens.settings.PlayerSettings
@@ -79,6 +80,10 @@ fun NavGraphBuilder.navigationBuilder(
 ) {
   composable(Screens.Home.route) {
     HomeScreen(navController = navController, snackbarHostState = snackbarHostState)
+  }
+
+  composable(Screens.Podcast.route) {
+    echo.music.iad1tya.ui.screens.podcast.PodcastsScreen(navController = navController)
   }
 
   composable(Screens.Search.route) {
@@ -318,7 +323,7 @@ fun NavGraphBuilder.navigationBuilder(
         navArgument("highlightKey") {
           type = NavType.StringType
           nullable = true
-        }
+        },
       ),
   ) { backStackEntry ->
     UpdateSettings(
@@ -329,13 +334,19 @@ fun NavGraphBuilder.navigationBuilder(
   }
 
   composable(
+    route = "settings/echo_connect",
+  ) {
+    EchoConnectSettingsScreen(navController, scrollBehavior)
+  }
+
+  composable(
     route = "settings/account?highlightKey={highlightKey}",
     arguments =
       listOf(
         navArgument("highlightKey") {
           type = NavType.StringType
           nullable = true
-        }
+        },
       ),
   ) { backStackEntry ->
     AccountSettingsScreen(
@@ -352,7 +363,7 @@ fun NavGraphBuilder.navigationBuilder(
         navArgument("highlightKey") {
           type = NavType.StringType
           nullable = true
-        }
+        },
       ),
   ) { backStackEntry ->
     AccountSettingsScreen(
@@ -376,7 +387,7 @@ fun NavGraphBuilder.navigationBuilder(
         navArgument("highlightKey") {
           type = NavType.StringType
           nullable = true
-        }
+        },
       ),
   ) { backStackEntry ->
     AppearanceSettings(
@@ -397,7 +408,7 @@ fun NavGraphBuilder.navigationBuilder(
         navArgument("highlightKey") {
           type = NavType.StringType
           nullable = true
-        }
+        },
       ),
   ) { backStackEntry ->
     echo.music.iad1tya.ui.screens.settings.HapticsSettings(
@@ -439,7 +450,7 @@ fun NavGraphBuilder.navigationBuilder(
         navArgument("highlightKey") {
           type = NavType.StringType
           nullable = true
-        }
+        },
       ),
   ) { backStackEntry ->
     ContentSettings(
@@ -458,7 +469,7 @@ fun NavGraphBuilder.navigationBuilder(
         navArgument("highlightKey") {
           type = NavType.StringType
           nullable = true
-        }
+        },
       ),
   ) { backStackEntry ->
     AiSettings(
@@ -475,7 +486,7 @@ fun NavGraphBuilder.navigationBuilder(
         navArgument("highlightKey") {
           type = NavType.StringType
           nullable = true
-        }
+        },
       ),
   ) { backStackEntry ->
     PlayerSettings(
@@ -518,7 +529,7 @@ fun NavGraphBuilder.navigationBuilder(
         navArgument("highlightKey") {
           type = NavType.StringType
           nullable = true
-        }
+        },
       ),
   ) { backStackEntry ->
     PrivacySettings(
@@ -535,7 +546,7 @@ fun NavGraphBuilder.navigationBuilder(
         navArgument("highlightKey") {
           type = NavType.StringType
           nullable = true
-        }
+        },
       ),
   ) { backStackEntry ->
     BackupAndRestore(
@@ -566,9 +577,10 @@ fun NavGraphBuilder.navigationBuilder(
   composable("settings/spotify_import") { SpotifyImportScreen(navController) }
 
   composable("settings/spotify_login") { backStackEntry ->
-    val parentEntry = remember(backStackEntry) {
-      runCatching { navController.getBackStackEntry("settings/spotify_import") }.getOrNull()
-    }
+    val parentEntry =
+      remember(backStackEntry) {
+        runCatching { navController.getBackStackEntry("settings/spotify_import") }.getOrNull()
+      }
     val viewModel: echo.music.iad1tya.spotifyimport.SpotifyImportViewModel =
       if (parentEntry != null) {
         androidx.hilt.navigation.compose.hiltViewModel(parentEntry)
@@ -594,7 +606,7 @@ fun NavGraphBuilder.navigationBuilder(
         navArgument("highlightKey") {
           type = NavType.StringType
           nullable = true
-        }
+        },
       ),
   ) { backStackEntry ->
     AboutScreen(

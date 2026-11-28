@@ -79,7 +79,8 @@ fun LibraryScreen(navController: NavController) {
   var filterType by rememberEnumPreference(ChipSortTypeKey, LibraryFilter.LIBRARY)
   var selectedSourceTab by rememberSaveable {
     mutableStateOf(
-      if (filterType == LibraryFilter.SPOTIFY) LibrarySourceTab.SPOTIFY else LibrarySourceTab.IN_APP
+      if (filterType == LibraryFilter.SPOTIFY) LibrarySourceTab.SPOTIFY
+      else LibrarySourceTab.IN_APP,
     )
   }
   val coroutineScope = rememberCoroutineScope()
@@ -126,7 +127,7 @@ fun LibraryScreen(navController: NavController) {
   val context = LocalContext.current
 
   BackHandler(
-    enabled = filterType != LibraryFilter.LIBRARY || selectedSourceTab == LibrarySourceTab.SPOTIFY
+    enabled = filterType != LibraryFilter.LIBRARY || selectedSourceTab == LibrarySourceTab.SPOTIFY,
   ) {
     if (filterType != LibraryFilter.LIBRARY) {
       filterType = LibraryFilter.LIBRARY
@@ -238,6 +239,7 @@ fun LibraryScreen(navController: NavController) {
               HorizontalPager(
                 state = pagerState,
                 beyondViewportPageCount = 1,
+                verticalAlignment = Alignment.Top,
                 modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds(),
               ) { page ->
                 when (LibrarySourceTab.entries[page]) {
@@ -495,7 +497,7 @@ private fun LibrarySourceTabs(
       modifier
         .fillMaxWidth()
         .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-        .padding(horizontal = 16.dp, vertical = 6.dp)
+        .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 4.dp),
   ) {
     androidx.compose.material3.Surface(
       shape = CircleShape,
@@ -520,7 +522,7 @@ private fun LibrarySourceTabs(
               .fillMaxHeight()
               .padding(3.dp)
               .clip(CircleShape)
-              .background(MaterialTheme.colorScheme.primaryContainer)
+              .background(MaterialTheme.colorScheme.primaryContainer),
         )
 
         Row(
