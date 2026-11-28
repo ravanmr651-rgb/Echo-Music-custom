@@ -24,6 +24,18 @@ if (hasGoogleServicesConfig) {
   apply(plugin = "com.google.firebase.crashlytics")
 }
 
+// One persistent private key signs every public AURA release.
+// CI decodes the protected KEYSTORE_BASE64 secret into the repository-root keystore.jks.
+// For local release builds, credentials may also be supplied in local.properties.
+val releaseKeystoreFile =
+  rootProject.file("keystore.jks").takeIf { it.isFile } ?: file("keystore/release.keystore")
+val releaseStorePassword =
+  System.getenv("STORE_PASSWORD") ?: localProperties.getProperty("STORE_PASSWORD")
+val releaseKeyAlias =
+  System.getenv("KEY_ALIAS") ?: localProperties.getProperty("KEY_ALIAS")
+val releaseKeyPassword =
+  System.getenv("KEY_PASSWORD") ?: localProperties.getProperty("KEY_PASSWORD")
+
 android {
   namespace = "echo.music.iad1tya"
   compileSdk = 37
@@ -33,8 +45,8 @@ android {
     applicationId = "com.luv.auramusic"
     minSdk = 26
     targetSdk = 36
-    versionCode = 172
-    versionName = "1.4.11"
+    versionCode = 173
+    versionName = "1.4.12"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     vectorDrawables.useSupportLibrary = true
@@ -122,23 +134,11 @@ android {
   }
 
   signingConfigs {
-    create("persistentDebug") {
-      storeFile = file("persistent-debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
-    }
     create("release") {
-      val keystoreFile = rootProject.file("keystore.jks")
-      if (keystoreFile.exists()) {
-        storeFile = keystoreFile
-      } else {
-        val localKeystore = file("keystore/release.keystore")
-        if (localKeystore.exists()) storeFile = localKeystore
-      }
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = System.getenv("KEY_ALIAS")
-      keyPassword = System.getenv("KEY_PASSWORD")
+      storeFile = releaseKeystoreFile
+      storePassword = releaseStorePassword
+      keyAlias = releaseKeyAlias
+      keyPassword = releaseKeyPassword
     }
     getByName("debug") {
       keyAlias = "androiddebugkey"
@@ -154,12 +154,8 @@ android {
       isShrinkResources = true
       isCrunchPngs = false
       isDebuggable = false
-      signingConfig =
-        if (rootProject.file("keystore.jks").exists() || file("keystore/release.keystore").exists()) {
-          signingConfigs.getByName("release")
-        } else {
-          signingConfigs.getByName("debug")
-        }
+      // Never silently sign a distributable release with a machine-local debug key.
+      signingConfig = signingConfigs.getByName("release")
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       buildConfigField("String", "ARCHITECTURE", "\"release\"")
     }
@@ -219,6 +215,23 @@ android {
       excludes += "META-INF/io.netty.versions.properties"
       excludes += "META-INF/DEPENDENCIES"
     }
+  }
+}
+
+// Fail before executing a release packaging task if the persistent signing material is absent.
+gradle.taskGraph.whenReady {
+  val releasePackagingRequested = allTasks.any { task ->
+    task.project == project &&
+      (task.name.startsWith("assemble") || task.name.startsWith("bundle")) &&
+      task.name.contains("Release", ignoreCase = true)
+  }
+  if (releasePackagingRequested) {
+    check(releaseKeystoreFile.isFile) {
+      "AURA release keystore is missing. Add keystore.jks at the repository root; see docs/RELEASE_SIGNING.md."
+    }
+    check(!releaseStorePassword.isNullOrBlank()) { "STORE_PASSWORD is required for release signing." }
+    check(!releaseKeyAlias.isNullOrBlank()) { "KEY_ALIAS is required for release signing." }
+    check(!releaseKeyPassword.isNullOrBlank()) { "KEY_PASSWORD is required for release signing." }
   }
 }
 

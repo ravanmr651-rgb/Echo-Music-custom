@@ -39,3 +39,9 @@ lastfm-empty/build/
 BitChord-main/
 ArchiveTune-main/
 PixelMusic-main/
+
+# Android release signing keys — never commit private signing material
+*.jks
+*.keystore
+/keystore.jks
+/app/keystore/
