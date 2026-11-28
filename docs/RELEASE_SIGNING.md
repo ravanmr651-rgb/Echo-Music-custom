@@ -11,6 +11,33 @@ Open **Settings → Secrets and variables → Actions → New repository secret*
 - `KEY_ALIAS`: the signing key alias.
 - `KEY_PASSWORD`: the signing key password.
 
+## Generate the keystore on your Android phone
+
+1. Install **Termux** from [F-Droid](https://f-droid.org/packages/com.termux/). Do not use an untrusted APK mirror.
+2. Open Termux and run:
+
+```sh
+pkg update && pkg upgrade -y
+pkg install openjdk-21 -y
+keytool -help
+mkdir -p ~/aura-signing
+cd ~/aura-signing
+keytool -genkeypair -v -keystore aura-release.jks -storetype JKS -alias aura-release -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=AURA Music, OU=Android, O=AURA, C=IN"
+```
+
+When prompted, choose a strong keystore password and record it safely. When keytool asks for the key password, press **Enter** to use the same password. Use alias `aura-release`.
+
+3. Create a text file containing the one-line Base64 value and keep an original backup of the keystore:
+
+```sh
+termux-setup-storage
+mkdir -p ~/storage/shared/Download ~/storage/shared/Documents
+base64 aura-release.jks | tr -d '\\n' > ~/storage/shared/Download/aura-release-base64.txt
+cp aura-release.jks ~/storage/shared/Documents/aura-release.jks
+```
+
+Open `Download/aura-release-base64.txt` in a text editor, copy its entire contents, and paste it into the `KEYSTORE_BASE64` secret. Enter your recorded password for both password secrets and `aura-release` for `KEY_ALIAS`. Keep the original `aura-release.jks` and password in a separate secure backup. **Never paste the keystore or passwords into this chat.**
+
 Generate the keystore once on a trusted device with a JDK:
 
 ```sh
