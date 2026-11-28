@@ -294,17 +294,17 @@ dimension is unchanged: `universal`, `arm64`, `armeabi`, `x86`, `x86_64`.
 # Debug build
 ./gradlew assembleUniversalGmsDebug
 
-# Release build (needs signing env vars: STORE_PASSWORD, KEY_ALIAS,
-# KEY_PASSWORD and app/keystore/release.keystore)
-./gradlew assembleUniversalGmsRelease
+# Release build (requires the persistent root keystore.jks and
+# STORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD; see docs/RELEASE_SIGNING.md)
+./gradlew :app:assembleUniversalFossRelease
 ```
 
-Release builds are also GMS only — there is no separate FOSS release
-artifact anymore. `gmsImplementation`-scoped dependencies (Firebase, Cast,
-Play Services Auth, Google Drive API) are effectively always active now;
-new Google-Play-Services-dependent code no longer needs flavor gating, but
-keep using `gmsImplementation` in `build.gradle.kts` for consistency and in
-case a FOSS flavor is reintroduced later.
+Public AURA releases are built as the Universal FOSS variant and must always
+use the same persistent private signing key. GitHub Actions reads that key
+from the protected KEYSTORE_BASE64 repository secret; PR builds run tests
+without receiving signing secrets. Do not regenerate or commit the keystore.
+The GMS flavor remains available for builds that explicitly need Google Play
+Services; keep its dependencies flavor-gated with `gmsImplementation`.
 min/target/compile SDK: `minSdk 26`, `targetSdk 36`, `compileSdk 36`.
 NDK `27.0.12077973`. JDK 21 (kotlin/java toolchain).
 
