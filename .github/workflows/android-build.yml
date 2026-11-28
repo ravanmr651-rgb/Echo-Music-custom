@@ -5,6 +5,7 @@ on:
     branches: [ "main", "aura-futuristic-upgrade" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -59,43 +60,57 @@ jobs:
         chmod +x gradlew
         ./gradlew :core:testDebugUnitTest :lyrics:testDebugUnitTest :app:testUniversalFossDebugUnitTest
 
-    - name: Decode Keystore
-      if: ${{ env.KEYSTORE_BASE64 != '' }}
+    # Release signing secrets are checked only on trusted main-branch runs.
+    # Pull requests run tests but never receive or use private signing material.
+    - name: Check persistent release signing secrets
+      id: signing
+      if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
-        echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+        if [ -n "$KEYSTORE_BASE64" ] && [ -n "$STORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+          echo "Persistent release signing is configured." >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Release APK not built"
+            echo "The persistent signing key is not configured. Add the four repository Actions secrets described in [docs/RELEASE_SIGNING.md](https://github.com/ravanmr651-rgb/Echo-Music-custom/blob/main/docs/RELEASE_SIGNING.md), then run this workflow on `main`."
+            echo "No temporary/debug-signed release APK will be produced."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::Persistent release signing secrets are missing; skipping distributable APK build."
+        fi
 
-    - name: Build Release APK
-      if: ${{ env.KEYSTORE_BASE64 != '' }}
+    - name: Decode and validate persistent keystore
+      if: ${{ steps.signing.outputs.configured == 'true' }}
       env:
         KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      run: |
+        printf '%s' "$KEYSTORE_BASE64" | base64 --decode > keystore.jks
+        chmod 600 keystore.jks
+        keytool -list -keystore keystore.jks -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null
+        echo "Persistent keystore decoded and alias validated." >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Build signed Universal FOSS APK
+      if: ${{ steps.signing.outputs.configured == 'true' }}
+      env:
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
       run: |
         chmod +x gradlew
-        ./gradlew assembleUniversalGmsRelease
+        ./gradlew :app:assembleUniversalFossRelease
 
-    - name: Build Optimized FOSS Release APK (fallback signing)
-      if: ${{ env.KEYSTORE_BASE64 == '' }}
-      env:
-        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-      run: |
-        mkdir -p "$HOME/.android"
-        keytool -genkeypair \
-          -keystore "$HOME/.android/debug.keystore" \
-          -storepass android \
-          -alias androiddebugkey \
-          -keypass android \
-          -dname "CN=Android Debug,O=Android,C=US" \
-          -keyalg RSA \
-          -validity 10000
-        chmod +x gradlew
-        ./gradlew assembleUniversalFossRelease
-
-    - name: Upload Universal APK
+    - name: Upload signed Universal FOSS APK
+      if: ${{ steps.signing.outputs.configured == 'true' }}
       uses: actions/upload-artifact@v7
       with:
-        name: Echo-Music-Universal-APK
-        path: app/build/outputs/apk/**/*.apk
+        name: AURA-Music-Universal-FOSS-APK
+        path: app/build/outputs/apk/universalFoss/release/*.apk
+        if-no-files-found: error
+        retention-days: 30
