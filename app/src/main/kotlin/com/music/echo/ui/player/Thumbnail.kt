@@ -996,7 +996,7 @@ private fun SeekEffectOverlay(seekDirection: String, modifier: Modifier = Modifi
  */
 @SuppressLint("MissingPermission")
 @Composable
-private fun AuraAudioVisualizer(
+internal fun AuraAudioVisualizer(
   audioSessionId: Int,
   isPlaying: Boolean,
   modifier: Modifier = Modifier,
