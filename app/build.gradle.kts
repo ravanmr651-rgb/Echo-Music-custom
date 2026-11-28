@@ -24,6 +24,18 @@ if (hasGoogleServicesConfig) {
   apply(plugin = "com.google.firebase.crashlytics")
 }
 
+// One persistent private key signs every public AURA release.
+// CI decodes the protected KEYSTORE_BASE64 secret into the repository-root keystore.jks.
+// For local release builds, credentials may also be supplied in local.properties.
+val releaseKeystoreFile =
+  rootProject.file("keystore.jks").takeIf { it.isFile } ?: file("keystore/release.keystore")
+val releaseStorePassword =
+  System.getenv("STORE_PASSWORD") ?: localProperties.getProperty("STORE_PASSWORD")
+val releaseKeyAlias =
+  System.getenv("KEY_ALIAS") ?: localProperties.getProperty("KEY_ALIAS")
+val releaseKeyPassword =
+  System.getenv("KEY_PASSWORD") ?: localProperties.getProperty("KEY_PASSWORD")
+
 android {
   namespace = "echo.music.iad1tya"
   compileSdk = 37
@@ -120,18 +132,6 @@ android {
       ndk { abiFilters.add("x86_64") }
     }
   }
-
-  // One persistent private key signs every public AURA release.
-  // CI decodes the protected KEYSTORE_BASE64 secret into the repository-root keystore.jks.
-  // For local release builds, credentials may also be supplied in local.properties.
-  val releaseKeystoreFile =
-    rootProject.file("keystore.jks").takeIf { it.isFile } ?: file("keystore/release.keystore")
-  val releaseStorePassword =
-    System.getenv("STORE_PASSWORD") ?: localProperties.getProperty("STORE_PASSWORD")
-  val releaseKeyAlias =
-    System.getenv("KEY_ALIAS") ?: localProperties.getProperty("KEY_ALIAS")
-  val releaseKeyPassword =
-    System.getenv("KEY_PASSWORD") ?: localProperties.getProperty("KEY_PASSWORD")
 
   signingConfigs {
     create("release") {
