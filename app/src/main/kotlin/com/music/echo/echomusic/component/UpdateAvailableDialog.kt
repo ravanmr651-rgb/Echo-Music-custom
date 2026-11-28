@@ -197,7 +197,7 @@ fun UpdateAvailableDialog(
           Button(
             onClick = {
               onDismiss()
-              context.safeOpenUri("https://echomusic.fun")
+              context.safeOpenUri("https://github.com/ravanmr651-rgb/Echo-Music-custom/releases/latest")
             },
             shape = actionShape,
           ) {
