@@ -426,17 +426,6 @@ class MainActivity : ComponentActivity() {
     }
 
     lifecycleScope.launch {
-      val aiRecommendationsEnabled =
-        dataStore.data.map { it[AiRecommendationsKey] ?: false }.first()
-      if (aiRecommendationsEnabled) {
-        val lastUpdate = dataStore.data.map { it[LastAiRecommendationUpdateDayKey] ?: 0L }.first()
-        val currentDay = System.currentTimeMillis() / (1000 * 60 * 60 * 24)
-        if (lastUpdate != currentDay) {
-          dataStore.edit { it[LastAiRecommendationUpdateDayKey] = currentDay }
-          AiRecommendationHelper.generateRecommendations(this@MainActivity)
-        }
-      }
-
       dataStore.data
         .map {
           (try {
@@ -606,7 +595,10 @@ class MainActivity : ComponentActivity() {
               UpdateNotificationHelper.showUpdateNotification(context, latestVersion)
             }
           },
-          onError = { Log.e("UpdateCheck", "Startup check failed") },
+          onError = {
+            saveUpdateAvailableState(context, false)
+            Log.e("UpdateCheck", "Startup check failed")
+          },
         )
       }
     }
@@ -1180,7 +1172,7 @@ class MainActivity : ComponentActivity() {
 
         val currentTitle =
           when (navBackStackEntry?.destination?.route) {
-            Screens.Home.route -> "Echo Music"
+            Screens.Home.route -> stringResource(R.string.app_name)
             Screens.Search.route -> stringResource(R.string.search)
             Screens.Library.route -> stringResource(R.string.filter_library)
             Screens.ListenTogether.route -> stringResource(R.string.together)

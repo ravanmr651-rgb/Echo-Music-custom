@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM
 import androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM
 import androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM
@@ -131,6 +132,9 @@ class PlayerConnection(
         player.playbackState != STATE_ENDED && player.playWhenReady
       )
 
+  /** Current ExoPlayer audio session for output visual effects. */
+  val audioSessionId = MutableStateFlow(0)
+
   val mediaMetadata = MutableStateFlow(player.currentMetadata)
   val currentSong = mediaMetadata.flatMapLatest { database.song(it?.id) }
   val currentLyrics =
@@ -212,10 +216,13 @@ class PlayerConnection(
     }
   }
 
+  @OptIn(UnstableApi::class)
   private fun updateAttachedPlayer(newPlayer: Player) {
     attachedPlayer?.removeListener(this)
     attachedPlayer = newPlayer
     newPlayer.addListener(this)
+
+    audioSessionId.value = (newPlayer as? ExoPlayer)?.audioSessionId ?: 0
 
     playbackState.value = newPlayer.playbackState
     playWhenReady.value = newPlayer.playWhenReady
@@ -473,6 +480,11 @@ class PlayerConnection(
     } catch (e: Exception) {
       Timber.tag(TAG).e(e, "Error in skipToPreviousItem")
     }
+  }
+
+  @OptIn(UnstableApi::class)
+  override fun onAudioSessionIdChanged(audioSessionId: Int) {
+    this.audioSessionId.value = audioSessionId
   }
 
   override fun onPlaybackStateChanged(state: Int) {

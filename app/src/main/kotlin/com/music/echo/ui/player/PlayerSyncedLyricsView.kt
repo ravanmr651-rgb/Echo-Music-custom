@@ -11,7 +11,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,12 +26,12 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -97,10 +99,12 @@ fun PlayerSyncedLyricsView(
     }
 
   var currentPosition by remember { mutableLongStateOf(0L) }
-  LaunchedEffect(Unit) {
-    while (isActive) {
-      withFrameMillis {
+  LaunchedEffect(mediaMetadata?.id, lines.isNotEmpty()) {
+    if (lines.isNotEmpty()) {
+      while (isActive) {
         currentPosition = positionProvider()
+        // Lyric timestamps do not need a 60 FPS polling loop.
+        delay(50)
       }
     }
   }
@@ -112,52 +116,91 @@ fun PlayerSyncedLyricsView(
         .padding(horizontal = echo.music.iad1tya.constants.PlayerHorizontalPadding),
     contentAlignment = Alignment.CenterStart
   ) {
-    if (currentLyrics == null) {
-      // Loading skeleton
-      ShimmerHost(modifier = Modifier.fillMaxWidth()) {
-        TextPlaceholder(
-          height = 20.dp,
-          shape = RoundedCornerShape(8.dp),
-          modifier = Modifier.fillMaxWidth(0.6f)
-        )
-      }
-    } else if (lines.isEmpty()) {
-      // No synced lyrics found - just empty state, show nothing
-    } else {
-      val currentLineIndex =
-        remember(currentPosition, lines) {
-          val index = lines.indexOfLast { it.time <= currentPosition }
-          if (index >= 0) index else 0
+    when {
+      currentLyrics == null -> {
+        // Loading skeleton
+        ShimmerHost(modifier = Modifier.fillMaxWidth()) {
+          TextPlaceholder(
+            height = 20.dp,
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth(0.6f)
+          )
         }
-      val currentLine = lines.getOrNull(currentLineIndex)?.text ?: ""
+      }
+      lines.isEmpty() -> Unit
+      else -> {
+        val currentLineIndex =
+          remember(currentPosition, lines) {
+            val index = lines.indexOfLast { it.time <= currentPosition }
+            if (index >= 0) index else 0
+          }
+        val previousLine = lines.getOrNull(currentLineIndex - 1)?.text
+        val currentLine = lines.getOrNull(currentLineIndex)?.text.orEmpty()
+        val nextLine = lines.getOrNull(currentLineIndex + 1)?.text
 
-      AnimatedContent(
-        targetState = currentLine,
-        transitionSpec = {
-          (fadeIn(animationSpec = tween(400, easing = FastOutSlowInEasing)) +
-            slideInVertically(
-              animationSpec =
-                spring(
-                  dampingRatio = Spring.DampingRatioLowBouncy,
-                  stiffness = Spring.StiffnessLow
-                )
-            ) { height -> height / 2 })
-            .togetherWith(
-              fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
-                slideOutVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) { height -> -height / 2 }
+        Column(
+          modifier = Modifier.fillMaxWidth(),
+          verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+          Text(
+            text = "AURA LIVE LYRICS",
+            color = Color(0xFF8ADFFF),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.4.sp
+          )
+
+          previousLine?.let { line ->
+            Text(
+              text = line,
+              color = Color.White.copy(alpha = 0.38f),
+              fontSize = 14.sp,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
             )
-            .using(SizeTransform(clip = false))
-        },
-        label = "SyncedLyrics"
-      ) { lineText ->
-        Text(
-          text = lineText,
-          color = Color.White,
-          fontSize = 18.sp,
-          fontWeight = FontWeight.Bold,
-          textAlign = TextAlign.Left,
-          modifier = Modifier.fillMaxWidth()
-        )
+          }
+
+          AnimatedContent(
+            targetState = currentLine,
+            transitionSpec = {
+              (fadeIn(animationSpec = tween(400, easing = FastOutSlowInEasing)) +
+                slideInVertically(
+                  animationSpec =
+                    spring(
+                      dampingRatio = Spring.DampingRatioLowBouncy,
+                      stiffness = Spring.StiffnessLow
+                    )
+                ) { height -> height / 2 })
+                .togetherWith(
+                  fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
+                    slideOutVertically(
+                      animationSpec = tween(250, easing = FastOutSlowInEasing)
+                    ) { height -> -height / 2 }
+                )
+                .using(SizeTransform(clip = false))
+            },
+            label = "SyncedLyrics"
+          ) { lineText ->
+            Text(
+              text = lineText,
+              color = Color.White,
+              fontSize = 18.sp,
+              fontWeight = FontWeight.Bold,
+              textAlign = TextAlign.Left,
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+
+          nextLine?.let { line ->
+            Text(
+              text = line,
+              color = Color.White.copy(alpha = 0.58f),
+              fontSize = 15.sp,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
+        }
       }
     }
   }

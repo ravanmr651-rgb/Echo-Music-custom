@@ -1,7 +1,15 @@
 package echo.music.iad1tya.ui.player
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.media.audiofx.Visualizer
+import android.os.Handler
+import android.os.Looper
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -9,6 +17,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -21,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -36,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -49,11 +61,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -62,6 +77,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -266,6 +284,7 @@ fun Thumbnail(
   val queueTitle by playerConnection.queueTitle.collectAsState()
   val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
   val canSkipNext by playerConnection.canSkipNext.collectAsState()
+  val audioSessionId by playerConnection.audioSessionId.collectAsState()
 
   val swipeThumbnailPref by rememberPreference(SwipeThumbnailKey, true)
   val swipeThumbnail = swipeThumbnailPref && !isListenTogetherGuest
@@ -460,6 +479,7 @@ fun Thumbnail(
                 layoutDirection = layoutDirection,
                 onSeek = onSeekCallback,
                 playerConnection = playerConnection,
+                audioSessionId = audioSessionId,
                 context = context,
                 lazyGridState = thumbnailLazyGridState,
                 isLandscape = isLandscape,
@@ -539,6 +559,7 @@ private fun ThumbnailItem(
   layoutDirection: LayoutDirection,
   onSeek: (String, Boolean) -> Unit,
   playerConnection: echo.music.iad1tya.playback.PlayerConnection,
+  audioSessionId: Int = 0,
   context: android.content.Context,
   lazyGridState: androidx.compose.foundation.lazy.grid.LazyGridState,
   isLandscape: Boolean = false,
@@ -563,6 +584,29 @@ private fun ThumbnailItem(
           repeatMode = androidx.compose.animation.core.RepeatMode.Restart,
         ),
       label = "Rotation",
+    )
+  // Subtle perspective motion gives the current cover depth without changing transport controls.
+  val immersiveTiltX by
+    infiniteTransition.animateFloat(
+      initialValue = -2.6f,
+      targetValue = 2.6f,
+      animationSpec =
+        infiniteRepeatable(
+          animation = tween(5200, easing = LinearEasing),
+          repeatMode = RepeatMode.Reverse,
+        ),
+      label = "auraImmersiveTiltX",
+    )
+  val immersiveTiltY by
+    infiniteTransition.animateFloat(
+      initialValue = 2.2f,
+      targetValue = -2.2f,
+      animationSpec =
+        infiniteRepeatable(
+          animation = tween(6100, easing = LinearEasing),
+          repeatMode = RepeatMode.Reverse,
+        ),
+      label = "auraImmersiveTiltY",
     )
 
   val dataSaverEnabled by rememberPreference(key = DataSaverEnabledKey, defaultValue = false)
@@ -647,7 +691,15 @@ private fun ThumbnailItem(
               RoundedCornerShape(dimensions.cornerRadius)
             }
           )
-          .graphicsLayer { rotationZ = -rotation }
+          .graphicsLayer {
+             rotationZ = -rotation
+             val immersiveActive = isCurrentItem && isPlaying && !rotatingThumbnail
+             rotationX = if (immersiveActive) immersiveTiltX else 0f
+             rotationY = if (immersiveActive) immersiveTiltY else 0f
+             cameraDistance = 18f * density
+             shadowElevation = if (isCurrentItem) 18f else 0f
+             translationY = if (immersiveActive) -3f else 0f
+           }
     ) {
       if (hidePlayerThumbnail) {
         HiddenThumbnailPlaceholder(textBackgroundColor = textBackgroundColor)
@@ -862,6 +914,17 @@ private fun ThumbnailItem(
         }
       }
     }
+
+    if (isCurrentItem && !hidePlayerThumbnail) {
+      AuraAudioVisualizer(
+        audioSessionId = audioSessionId,
+        isPlaying = isPlaying,
+        modifier =
+          Modifier.align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp, vertical = 18.dp),
+      )
+    }
   }
 }
 
@@ -925,6 +988,177 @@ private fun SeekEffectOverlay(seekDirection: String, modifier: Modifier = Modifi
       modifier.background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp)).padding(8.dp),
   )
 }
+
+
+/**
+ * Output visualizer for the active artwork. Live waveform capture is enabled only after the
+ * user grants RECORD_AUDIO; otherwise the player shows a low-cost animated pulse.
+ */
+@SuppressLint("MissingPermission")
+@Composable
+internal fun AuraAudioVisualizer(
+  audioSessionId: Int,
+  isPlaying: Boolean,
+  modifier: Modifier = Modifier,
+) {
+  val context = LocalContext.current
+  var permissionGranted by remember {
+    mutableStateOf(
+      context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
+        PackageManager.PERMISSION_GRANTED
+    )
+  }
+  val permissionLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+      permissionGranted = it
+    }
+  var levels by remember(audioSessionId) {
+    mutableStateOf(FloatArray(AURA_VISUALIZER_BARS) { 0.06f })
+  }
+  var hasLiveCapture by remember(audioSessionId) { mutableStateOf(false) }
+
+  DisposableEffect(audioSessionId, isPlaying, permissionGranted) {
+    var active = true
+    var visualizer: Visualizer? = null
+    val mainHandler = Handler(Looper.getMainLooper())
+
+    if (isPlaying && audioSessionId > 0 && permissionGranted) {
+      visualizer =
+        runCatching {
+          Visualizer(audioSessionId).apply {
+            captureSize = Visualizer.getCaptureSizeRange()[1]
+            setDataCaptureListener(
+              object : Visualizer.OnDataCaptureListener {
+                override fun onWaveFormDataCapture(
+                  visualizer: Visualizer,
+                  waveform: ByteArray,
+                  samplingRate: Int,
+                ) {
+                  val nextLevels = FloatArray(AURA_VISUALIZER_BARS)
+                  for (bar in 0 until AURA_VISUALIZER_BARS) {
+                    val start = bar * waveform.size / AURA_VISUALIZER_BARS
+                    val end =
+                      ((bar + 1) * waveform.size / AURA_VISUALIZER_BARS)
+                        .coerceAtLeast(start + 1)
+                    var peak = 0f
+                    for (sampleIndex in start until minOf(end, waveform.size)) {
+                      val sample = (waveform[sampleIndex].toInt() and 0xFF) - 128
+                      peak = maxOf(peak, kotlin.math.abs(sample) / 128f)
+                    }
+                    nextLevels[bar] = peak.coerceIn(0.04f, 1f)
+                  }
+                  mainHandler.post {
+                    if (active) {
+                      levels = nextLevels
+                      hasLiveCapture = true
+                    }
+                  }
+                }
+
+                override fun onFftDataCapture(
+                  visualizer: Visualizer,
+                  fft: ByteArray,
+                  samplingRate: Int,
+                ) = Unit
+              },
+              Visualizer.getMaxCaptureRate() / 2,
+              true,
+              false,
+            )
+            enabled = true
+          }
+        }.getOrNull()
+    }
+
+    hasLiveCapture = visualizer != null
+
+    onDispose {
+      active = false
+      visualizer?.let { effect ->
+        runCatching { effect.enabled = false }
+        runCatching { effect.setDataCaptureListener(null, 0, false, false) }
+        runCatching { effect.release() }
+      }
+      mainHandler.removeCallbacksAndMessages(null)
+    }
+  }
+
+  val motion by
+    rememberInfiniteTransition(label = "auraVisualizerPulse").animateFloat(
+      initialValue = 0f,
+      targetValue = 1f,
+      animationSpec =
+        infiniteRepeatable(
+          animation = tween(1800, easing = LinearEasing),
+          repeatMode = RepeatMode.Restart,
+        ),
+      label = "auraVisualizerMotion",
+    )
+
+  Row(
+    modifier =
+      modifier
+        .height(48.dp)
+        .clip(RoundedCornerShape(24.dp))
+        .background(Color(0xCC080D1D))
+        .padding(horizontal = 12.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    androidx.compose.foundation.layout.Column(modifier = Modifier.width(58.dp)) {
+      androidx.compose.material3.Text(
+        text = "AURA",
+        color = Color.White,
+        fontSize = 9.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 1.1.sp,
+        maxLines = 1,
+      )
+      androidx.compose.material3.Text(
+        text = if (hasLiveCapture) "LIVE" else if (permissionGranted) "PULSE" else "ENABLE",
+        color = Color(0xFF7DEBFF),
+        fontSize = 8.sp,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 1.sp,
+        maxLines = 1,
+        modifier =
+          if (permissionGranted) Modifier
+          else Modifier.clickable {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+          },
+      )
+    }
+    Canvas(modifier = Modifier.weight(1f).height(32.dp)) {
+      val gap = size.width * 0.009f
+      val barWidth = (size.width - gap * (AURA_VISUALIZER_BARS - 1)) / AURA_VISUALIZER_BARS
+      for (index in 0 until AURA_VISUALIZER_BARS) {
+        val fallback =
+          if (isPlaying) {
+            0.12f +
+              0.52f *
+                kotlin.math.abs(
+                  kotlin.math.sin(motion * (2f * kotlin.math.PI.toFloat()) + index * 0.58f)
+                )
+          } else {
+            0.05f
+          }
+        val amplitude =
+          (if (hasLiveCapture) levels.getOrElse(index) { 0f } else fallback).coerceIn(0f, 1f)
+        val barHeight = (size.height * (0.14f + amplitude * 0.82f)).coerceIn(2f, size.height)
+        drawRoundRect(
+          brush =
+            Brush.verticalGradient(
+              colors = listOf(Color(0xFF8A75FF), Color(0xFF42DDF5))
+            ),
+          topLeft = Offset(index * (barWidth + gap), (size.height - barHeight) / 2f),
+          size = Size(barWidth, barHeight),
+          cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f),
+        )
+      }
+    }
+  }
+}
+
+private const val AURA_VISUALIZER_BARS = 36
 
 internal fun normalizeCanvasSongTitle(raw: String): String {
   val stripped =

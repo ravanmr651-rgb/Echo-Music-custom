@@ -342,7 +342,7 @@ fun UpdateScreen(navController: NavHostController) {
                     } else {
                       val urlToDownload =
                         currentStatus.apkUrl
-                          ?: "https://github.com/EchoMusicApp/Echo-Music/releases/download/${currentStatus.version}/echomusic.apk"
+                          ?: "https://github.com/ravanmr651-rgb/Echo-Music-custom/releases/download/${currentStatus.version}/echomusic.apk"
 
                       val constraints =
                         Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
@@ -671,15 +671,14 @@ suspend fun checkForUpdate(
 ) {
   withContext(Dispatchers.IO) {
     try {
-      val url = URL("https://api.github.com/repos/EchoMusicApp/Echo-Music/releases/latest")
+      val url = URL("https://api.github.com/repos/ravanmr651-rgb/Echo-Music-custom/releases/latest")
       val json = url.openStream().bufferedReader().use { it.readText() }
       val targetRelease = JSONObject(json)
 
       val currentVersion = BuildConfig.VERSION_NAME
       val targetTagName = targetRelease.getString("tag_name")
-      val currentClean = currentVersion.removePrefix("b").removePrefix("v").trim()
-      val targetClean = targetTagName.removePrefix("b").removePrefix("v").trim()
-      val shouldShow = currentClean != targetClean
+      // Only offer releases that are newer than the installed AURA Music build.
+      val shouldShow = isNewerVersion(targetTagName, currentVersion)
 
       if (shouldShow) {
         val tagWithPrefix = targetRelease.getString("tag_name")
@@ -691,7 +690,7 @@ suspend fun checkForUpdate(
         try {
           val changelogUrl =
             URL(
-              "https://github.com/EchoMusicApp/Echo-Music/releases/download/$tagWithPrefix/changelog.json"
+              "https://github.com/ravanmr651-rgb/Echo-Music-custom/releases/download/$tagWithPrefix/changelog.json"
             )
           val changelogJson = changelogUrl.openStream().bufferedReader().use { it.readText() }
           val changelogData = JSONObject(changelogJson)
@@ -811,7 +810,7 @@ suspend fun fetchChangelogForVersion(currentVersion: String): WhatsNewInfo? =
     try {
       val cleanCurrent = currentVersion.removePrefix("b").removePrefix("v").trim()
       val releasesJson =
-        openTimedStream("https://api.github.com/repos/EchoMusicApp/Echo-Music/releases")
+        openTimedStream("https://api.github.com/repos/ravanmr651-rgb/Echo-Music-custom/releases")
           .bufferedReader()
           .use { it.readText() }
       val releases = JSONArray(releasesJson)
@@ -833,7 +832,7 @@ suspend fun fetchChangelogForVersion(currentVersion: String): WhatsNewInfo? =
       try {
         val changelogJson =
           openTimedStream(
-              "https://github.com/EchoMusicApp/Echo-Music/releases/download/$tag/changelog.json"
+              "https://github.com/ravanmr651-rgb/Echo-Music-custom/releases/download/$tag/changelog.json"
             )
             .bufferedReader()
             .use { it.readText() }

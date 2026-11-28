@@ -323,6 +323,7 @@ fun BottomSheetPlayer(
   val cropAlbumArt by rememberPreference(CropAlbumArtKey, false)
   val showLyricsOnPlayer by rememberPreference(ShowLyricsOnPlayerKey, false)
   val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
+  val audioSessionId by playerConnection.audioSessionId.collectAsState()
   val isEpisode =
     mediaMetadata?.let { metadata ->
       val durationMs = maxOf(playerConnection.player.duration, metadata.duration * 1000L)
@@ -1404,6 +1405,30 @@ fun BottomSheetPlayer(
               label = "appleMusicBackground",
             ) { thumbnailUrl ->
               if (thumbnailUrl != null) {
+                val auraAppleTransition =
+                  rememberInfiniteTransition(label = "auraAppleMusicImmersive")
+                val auraAppleTiltX by
+                  auraAppleTransition.animateFloat(
+                    initialValue = -2.4f,
+                    targetValue = 2.4f,
+                    animationSpec =
+                      infiniteRepeatable(
+                        animation = tween(5600, easing = LinearEasing),
+                        repeatMode = RepeatMode.Reverse,
+                      ),
+                    label = "auraAppleTiltX",
+                  )
+                val auraAppleTiltY by
+                  auraAppleTransition.animateFloat(
+                    initialValue = 2f,
+                    targetValue = -2f,
+                    animationSpec =
+                      infiniteRepeatable(
+                        animation = tween(6400, easing = LinearEasing),
+                        repeatMode = RepeatMode.Reverse,
+                      ),
+                    label = "auraAppleTiltY",
+                  )
                 Box(
                   modifier =
                     Modifier.fillMaxSize().graphicsLayer { alpha = backgroundAlphaProvider() }
@@ -1459,7 +1484,15 @@ fun BottomSheetPlayer(
                           .build(),
                       contentDescription = null,
                       contentScale = ContentScale.Crop,
-                      modifier = Modifier.fillMaxSize(),
+                      modifier =
+                        Modifier.fillMaxSize().graphicsLayer {
+                          val immersiveActive = isPlaying && !showInlineLyrics
+                          rotationX = if (immersiveActive) auraAppleTiltX else 0f
+                          rotationY = if (immersiveActive) auraAppleTiltY else 0f
+                          cameraDistance = 18f * density
+                          shadowElevation = if (immersiveActive) 20f else 0f
+                          translationY = if (immersiveActive) -3f else 0f
+                        },
                     )
 
                     if (!isEpisode && enableCanvas && canvasArtwork != null && showCanvas) {
@@ -1470,6 +1503,17 @@ fun BottomSheetPlayer(
                         clipStartMs = canvasArtwork?.clipStartMs,
                         clipEndMs = canvasArtwork?.clipEndMs,
                         modifier = Modifier.fillMaxSize(),
+                      )
+                    }
+
+                    if (!isEpisode) {
+                      AuraAudioVisualizer(
+                        audioSessionId = audioSessionId,
+                        isPlaying = isPlaying,
+                        modifier =
+                          Modifier.align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(horizontal = 22.dp, vertical = 18.dp),
                       )
                     }
                   }
